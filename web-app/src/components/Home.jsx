@@ -10,10 +10,10 @@ export default function Home() {
 
   const getUserDetails = async (accessToken) => {
     const response = await fetch(
-      `https://www.googleapis.com/oauth2/v1/userinfo?alt=json&access_token=${accessToken}`
+      `https://www.googleapis.comc?alt=json&access_token=${accessToken}`
     );
     const data = await response.json();
-    
+
     setUserDetails(data);
   };
 
@@ -61,7 +61,7 @@ export default function Home() {
                 alt={`${userDetails.given_name}'s profile`}
                 className="profile-pic"
               />
-              <p>Welcome back to Devteria,</p>
+              <p>Welcome back to Hieudv,</p>
               <h1 className="name">{userDetails.name}</h1>
               <p className="email">{userDetails.email}</p>{" "}
             </Box>

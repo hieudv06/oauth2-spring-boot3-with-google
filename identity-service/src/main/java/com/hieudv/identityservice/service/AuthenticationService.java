@@ -3,12 +3,14 @@ package com.hieudv.identityservice.service;
 import java.text.ParseException;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
-import java.util.Date;
-import java.util.StringJoiner;
-import java.util.UUID;
+import java.util.*;
 
+import com.hieudv.identityservice.constant.PredefinedRole;
 import com.hieudv.identityservice.dto.request.*;
-import com.hieudv.identityservice.repository.OutboundIdentityClient;
+import com.hieudv.identityservice.dto.response.OutboundUserResponse;
+import com.hieudv.identityservice.entity.Role;
+import com.hieudv.identityservice.repository.httpclient.OutboundIdentityClient;
+import com.hieudv.identityservice.repository.httpclient.OutboundUserClient;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -43,6 +45,7 @@ public class AuthenticationService {
     UserRepository userRepository;
     InvalidatedTokenRepository invalidatedTokenRepository;
     OutboundIdentityClient outboundIdentityClient;
+    OutboundUserClient outboundUserClient;
 
     @NonFinal
     @Value("${jwt.signerKey}")
@@ -84,6 +87,7 @@ public class AuthenticationService {
     }
 
     public AuthenticationResponse outboundAuthenticate(String code) {
+        try {
         var response = outboundIdentityClient.exchangeToken(ExchangeTokenRequest.builder()
                 .code(code)
                 .clientId(CLIENT_ID)
@@ -91,11 +95,32 @@ public class AuthenticationService {
                 .redirectUri(REDIRECT_URIS)
                 .grantType(GRANT_TYPE)
                 .build());
+
         log.info("TOKEN RESPONSE {}",response);
 
-        return AuthenticationResponse.builder()
-                .token(response.getAccessToken())
-                .build();
+        var userInfo = outboundUserClient.getUserInfo("json",response.getAccessToken());
+
+        log.info("USER INFO RESPONSE {}",userInfo);
+
+        Set<Role> role = new HashSet<>();
+        role.add(Role.builder().name(PredefinedRole.USER_ROLE).build());
+
+        var user = userRepository.findByUsername(userInfo.getEmail()).orElseGet(
+                ()-> userRepository.save(User.builder()
+                                .username(userInfo.getEmail())
+                                .firstName(userInfo.getGivenName())
+                                .lastName(userInfo.getFamilyName())
+                                .roles(role)
+                        .build())
+        );
+            return AuthenticationResponse.builder()
+                    .token(response.getAccessToken())
+                    .build();
+
+        } catch (AppException exception) {
+            log.info("Error when get token");
+        }
+        return null;
     }
 
     public AuthenticationResponse authenticate(AuthenticationRequest request) {

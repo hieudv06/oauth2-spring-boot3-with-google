@@ -1,4 +1,4 @@
-package com.hieudv.identityservice.repository;
+package com.hieudv.identityservice.repository.httpclient;
 
 
 import com.hieudv.identityservice.dto.request.ExchangeTokenRequest;
