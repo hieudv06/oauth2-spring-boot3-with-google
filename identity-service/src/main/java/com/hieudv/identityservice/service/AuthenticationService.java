@@ -87,7 +87,7 @@ public class AuthenticationService {
     }
 
     public AuthenticationResponse outboundAuthenticate(String code) {
-        try {
+
         var response = outboundIdentityClient.exchangeToken(ExchangeTokenRequest.builder()
                 .code(code)
                 .clientId(CLIENT_ID)
@@ -98,12 +98,15 @@ public class AuthenticationService {
 
         log.info("TOKEN RESPONSE {}",response);
 
+        //get User info
         var userInfo = outboundUserClient.getUserInfo("json",response.getAccessToken());
 
         log.info("USER INFO RESPONSE {}",userInfo);
 
         Set<Role> role = new HashSet<>();
         role.add(Role.builder().name(PredefinedRole.USER_ROLE).build());
+
+        //onboard user
 
         var user = userRepository.findByUsername(userInfo.getEmail()).orElseGet(
                 ()-> userRepository.save(User.builder()
@@ -113,14 +116,15 @@ public class AuthenticationService {
                                 .roles(role)
                         .build())
         );
+
+        // get token system
+        var token = generateToken(user);
             return AuthenticationResponse.builder()
-                    .token(response.getAccessToken())
+                    .token(token)
                     .build();
 
-        } catch (AppException exception) {
-            log.info("Error when get token");
-        }
-        return null;
+
+
     }
 
     public AuthenticationResponse authenticate(AuthenticationRequest request) {
